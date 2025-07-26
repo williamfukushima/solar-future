@@ -1,0 +1,93 @@
+{
+  "name": "RequestReportData",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "097c50a8-1ef4-4ac1-b4c0-ab648c7522fe",
+        "responseMode": "lastNode",
+        "responseData": "allEntries",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -336,
+        -48
+      ],
+      "id": "c38678ac-75bf-405d-bc41-0830fbb1ed2a",
+      "name": "Webhook",
+      "webhookId": "097c50a8-1ef4-4ac1-b4c0-ab648c7522fe"
+    },
+    {
+      "parameters": {
+        "language": "python",
+        "pythonCode": "import json\nimport pandas as pd\nimport numpy as np\nfrom datetime import datetime, timedelta\n\n#region Utils\nformat_string = \"%Y-%m-%dT%H:%M:%S\"\n\ndef lerp(a, b, t):\n    \"\"\"\n    Linearly interpolates between a and b by t.\n    t is typically between 0.0 and 1.0.\n    \"\"\"\n    return a + (b - a) * t\n\ndef clamp(value, min_val, max_val):\n    \"\"\"\n    Clamps a value between a minimum and maximum.\n    \"\"\"\n    return max(min_val, min(value, max_val))\n\ndef lerp_clamped(a, b, t):\n    \"\"\"\n    Linearly interpolates between a and b, with t clamped between 0.0 and 1.0.\n    \"\"\"\n    clamped_t = clamp(t, 0.0, 1.0)\n    return a + (b - a) * clamped_t\n\ndef read_series_column(group_df, field: str):\n\treturn group_df.keys().to_list().index(field)\n\ndef is_outlier_zscore(data, value, threshold=3):\n\tmean = np.mean(data)\n\tstd_dev = np.std(data)\n\tif std_dev == 0:\n\t\treturn False\n\tz_score = (value - mean) / std_dev\n\treturn abs(z_score) > threshold\n#endregion\n\n#region Reading the n8n input into pandas dataframe\ndata = [item['json'] for item in items]\ndf = pd.DataFrame(data)\n#endregion\n\ngrouped_data = df.groupby('contract_id')\n\ndata = []\nfor group_key, group_df in grouped_data:\n    readings = []\n    group_df.sort_values(by='reading_date', ascending=False)\n    totalSum = 0\n    finished = True\n    for entry in group_df.values:\n        \n        if  datetime.strptime(entry[read_series_column(group_df, 'reading_date')].split(\".\")[0], format_string) < pd.Timestamp.now() - timedelta(days=90):\n            totalSum = pd.Series(list(map(lambda item : item[read_series_column(group_df, 'kwh')], readings))).sum()\n            readings.append(entry)\n            finished = False\n            break\n        readings.append(entry)\n\n    if(finished):\n        totalSum = pd.Series(list(map(lambda item : item[read_series_column(group_df, 'kwh')], readings))).sum()\n\n    totalPeriod = timedelta(0)\n    if ((not finished) and len(readings) > 1) or (finished and len(readings) > 0):\n        evaluation_start_date = datetime.now()\n        evaluation_end_date = datetime.now()\n        if finished:\n            entry0 = datetime.strptime(readings[0][read_series_column(group_df, 'reading_date')].split(\".\")[0], format_string)\n            entryLast = datetime.strptime(readings[-1][read_series_column(group_df, 'reading_date')].split(\".\")[0], format_string)\n            startDate = datetime.strptime(readings[0][read_series_column(group_df, 'start_date')].split(\".\")[0], format_string)\n            evaluation_start_date = startDate\n            evaluation_end_date = entry0\n            totalPeriod = entry0 - startDate\n            if(totalPeriod.days > 90):\n                totalSum -= lerp(0.0, readings[-1][read_series_column(group_df, 'kwh')], (totalPeriod.days - 90)/(entryLast - startDate).days)\n        else:\n            entry0 = datetime.strptime(readings[0][read_series_column(group_df, 'reading_date')].split(\".\")[0], format_string)\n            entryLast = datetime.strptime(readings[-1][read_series_column(group_df, 'reading_date')].split(\".\")[0], format_string)\n            evaluation_start_date = entryLast\n            evaluation_end_date = entry0\n            totalPeriod = entry0 - entryLast\n        data.append(\n        {\n\t\t\t\"client_id\": group_df.values[0][read_series_column(group_df, 'client_id')],\n            \"name\": group_df.values[0][read_series_column(group_df, 'name')],\n\t\t\t\"contract_id\": group_df.values[0][read_series_column(group_df, 'contract_id')],\n\t\t\t\"total_sum\": totalSum,\n\t\t\t\"evaluation_start_date\": evaluation_start_date,\n\t\t\t\"evaluation_end_date\": evaluation_end_date\n\t\t})\nprocessed_df = pd.DataFrame(data)\ngrouped_data_by_client = processed_df.groupby('client_id')\n\nreturn_data = []\n\nfor group_key, group_df in grouped_data_by_client:\n\treturn_data.append({\n            \"client_id\": group_df.values[0][read_series_column(group_df, 'client_id')],\n            \"client_name\": group_df.values[0][read_series_column(group_df, 'name')],\n\t\t\t\"3_months_average_consumption\": group_df['total_sum'].sum()/((group_df['evaluation_end_date'].max() - group_df['evaluation_start_date'].min()).days/30.0),\n\t\t\t\"evaluation_start_date\": group_df['evaluation_start_date'].min().strftime(format_string),\n\t\t\t\"evaluation_end_date\": group_df['evaluation_end_date'].max().strftime(format_string),\n\t\t}\n\t\t)\n\n\n# Analyse the outliers using the zscore method\nreturning_df = pd.DataFrame(return_data)\n\nfor index, row in returning_df.iterrows():\n\treturn_data[index]['outlier'] = str(is_outlier_zscore(returning_df[\"3_months_average_consumption\"], row[\"3_months_average_consumption\"], threshold=3))\n\nreturn return_data\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        160,
+        -48
+      ],
+      "id": "c4dbcf2a-10d9-4fc9-8b8d-a50b33ff968e",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT clients.client_id, name, contracts.contract_id, kwh, reading_date, start_date FROM solar_future.clients\nINNER JOIN solar_future.contracts ON solar_future.clients.client_id = solar_future.contracts.client_id\nINNER JOIN solar_future.energy_readings ON solar_future.energy_readings.contract_id = solar_future.contracts.contract_id\nWHERE contracts.is_active = TRUE\nORDER BY clients.client_id",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -80,
+        -48
+      ],
+      "id": "bb41f50e-ea5b-4aae-8353-97300736c8b5",
+      "name": "Get client active contract readings",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "ldhF6xzosqrAvenk",
+          "name": "Postgres account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Get client active contract readings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get client active contract readings": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "69f9b599-0319-4c57-8e8b-d144d0d837ec",
+  "meta": {
+    "instanceId": "d2c4196b52ad3f8b61d20a5bf48a3628867463b763932423daf6a265e8220947"
+  },
+  "id": "kIfchzCw3v9xJ2mR",
+  "tags": []
+}

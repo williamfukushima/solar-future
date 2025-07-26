@@ -1,0 +1,164 @@
+{
+  "name": "RequestReport",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "af52bc4d-aa45-4430-9d4b-e6f7d43f2225",
+        "responseMode": "lastNode",
+        "responseData": "allEntries",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -96,
+        0
+      ],
+      "id": "f7903523-d4f2-45ba-8187-142c59b3ddf5",
+      "name": "Webhook",
+      "webhookId": "af52bc4d-aa45-4430-9d4b-e6f7d43f2225"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4O-MINI"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=Objetivo: Gere um relatório de consumo de energia dos clientes. Tire conclusões a cerca das variáveis estatísticas em relação a tendência da distribuição.\n\nInformações fornecidas: será fornecido um objetos no formato json representando métricas em relação às médias de consumo dos clientes nos últimos 3 meses, contendo os seguintes campos:\n\n\"outliers_count\": número de clientes os quais os consumos são considerados outliers em nossa distribuição.\n\"mean\": a média da distribuição das médias de consumo\n\"std\": desvio padrão das médias de consumo\n\"start_date\": data inicial do período avaliado\n\"end_date\": data final do período avaliado\n\"q1\": 1o quartil\n\"q2\": mediana\n\"q3\": 3o quartil\n\"skew\": assimetria\n\"kurt\": kurtose\n\n\nA seguir, está o objeto JSON mencionado:\n{{ JSON.stringify($json) }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        976,
+        0
+      ],
+      "id": "de878ae9-ddd4-4fd1-9711-3d36534e755e",
+      "name": "Message a model",
+      "alwaysOutputData": true,
+      "executeOnce": false,
+      "credentials": {
+        "openAiApi": {
+          "id": "PetTxrdZ3rp6ZuRi",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "language": "python",
+        "pythonCode": "import json\nimport pandas as pd\nimport numpy as np\nfrom datetime import datetime, timedelta\n\n#region Utils\nformat_string = \"%Y-%m-%dT%H:%M:%S\"\n\ndef lerp(a, b, t):\n    \"\"\"\n    Linearly interpolates between a and b by t.\n    t is typically between 0.0 and 1.0.\n    \"\"\"\n    return a + (b - a) * t\n\ndef clamp(value, min_val, max_val):\n    \"\"\"\n    Clamps a value between a minimum and maximum.\n    \"\"\"\n    return max(min_val, min(value, max_val))\n\ndef lerp_clamped(a, b, t):\n    \"\"\"\n    Linearly interpolates between a and b, with t clamped between 0.0 and 1.0.\n    \"\"\"\n    clamped_t = clamp(t, 0.0, 1.0)\n    return a + (b - a) * clamped_t\n\ndef read_series_column(group_df, field: str):\n\treturn group_df.keys().to_list().index(field)\n\ndef is_outlier_zscore(data, value, threshold=3):\n\tmean = np.mean(data)\n\tstd_dev = np.std(data)\n\tif std_dev == 0:\n\t\treturn False\n\tz_score = (value - mean) / std_dev\n\treturn abs(z_score) > threshold\n#endregion\n\n#region Reading the n8n input into pandas dataframe\ndata = [item['json'] for item in items]\ndf = pd.DataFrame(data)\n#endregion\n\ngrouped_data = df.groupby('contract_id')\n\ndata = []\nfor group_key, group_df in grouped_data:\n    readings = []\n    group_df.sort_values(by='reading_date', ascending=False)\n    totalSum = 0\n    finished = True\n    for entry in group_df.values:\n        \n        if  datetime.strptime(entry[read_series_column(group_df, 'reading_date')].split(\".\")[0], format_string) < pd.Timestamp.now() - timedelta(days=90):\n            totalSum = pd.Series(list(map(lambda item : item[read_series_column(group_df, 'kwh')], readings))).sum()\n            readings.append(entry)\n            finished = False\n            break\n        readings.append(entry)\n\n    if(finished):\n        totalSum = pd.Series(list(map(lambda item : item[read_series_column(group_df, 'kwh')], readings))).sum()\n\n    totalPeriod = timedelta(0)\n    if ((not finished) and len(readings) > 1) or (finished and len(readings) > 0):\n        evaluation_start_date = datetime.now()\n        evaluation_end_date = datetime.now()\n        if finished:\n            entry0 = datetime.strptime(readings[0][read_series_column(group_df, 'reading_date')].split(\".\")[0], format_string)\n            entryLast = datetime.strptime(readings[-1][read_series_column(group_df, 'reading_date')].split(\".\")[0], format_string)\n            startDate = datetime.strptime(readings[0][read_series_column(group_df, 'start_date')].split(\".\")[0], format_string)\n            evaluation_start_date = startDate\n            evaluation_end_date = entry0\n            totalPeriod = entry0 - startDate\n            if(totalPeriod.days > 90):\n                totalSum -= lerp(0.0, readings[-1][read_series_column(group_df, 'kwh')], (totalPeriod.days - 90)/(entryLast - startDate).days)\n        else:\n            entry0 = datetime.strptime(readings[0][read_series_column(group_df, 'reading_date')].split(\".\")[0], format_string)\n            entryLast = datetime.strptime(readings[-1][read_series_column(group_df, 'reading_date')].split(\".\")[0], format_string)\n            evaluation_start_date = entryLast\n            evaluation_end_date = entry0\n            totalPeriod = entry0 - entryLast\n        data.append(\n        {\n\t\t\t\"client_id\": group_df.values[0][read_series_column(group_df, 'client_id')],\n            \"name\": group_df.values[0][read_series_column(group_df, 'name')],\n\t\t\t\"contract_id\": group_df.values[0][read_series_column(group_df, 'contract_id')],\n\t\t\t\"total_sum\": totalSum,\n\t\t\t\"evaluation_start_date\": evaluation_start_date,\n\t\t\t\"evaluation_end_date\": evaluation_end_date\n\t\t})\nprocessed_df = pd.DataFrame(data)\ngrouped_data_by_client = processed_df.groupby('client_id')\n\nreturn_data = []\n\nfor group_key, group_df in grouped_data_by_client:\n\treturn_data.append({\n            \"client_id\": group_df.values[0][read_series_column(group_df, 'client_id')],\n            \"client_name\": group_df.values[0][read_series_column(group_df, 'name')],\n\t\t\t\"3_months_average_consumption\": group_df['total_sum'].sum()/((group_df['evaluation_end_date'].max() - group_df['evaluation_start_date'].min()).days/30.0),\n\t\t\t\"evaluation_start_date\": group_df['evaluation_start_date'].min().strftime(format_string),\n\t\t\t\"evaluation_end_date\": group_df['evaluation_end_date'].max().strftime(format_string),\n\t\t}\n\t\t)\n\n\n# Analyse the outliers using the zscore method\nreturning_df = pd.DataFrame(return_data)\n\nfor index, row in returning_df.iterrows():\n\treturn_data[index]['outlier'] = str(is_outlier_zscore(returning_df[\"3_months_average_consumption\"], row[\"3_months_average_consumption\"], threshold=3))\n\nreturn return_data\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        416,
+        0
+      ],
+      "id": "73be9ca7-589d-4321-8e1d-d8d3302bb59c",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT clients.client_id, name, contracts.contract_id, kwh, reading_date, start_date FROM solar_future.clients\nINNER JOIN solar_future.contracts ON solar_future.clients.client_id = solar_future.contracts.client_id\nINNER JOIN solar_future.energy_readings ON solar_future.energy_readings.contract_id = solar_future.contracts.contract_id\nWHERE contracts.is_active = TRUE\nORDER BY clients.client_id",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        176,
+        0
+      ],
+      "id": "9c870426-23ef-466d-a541-975d743702cb",
+      "name": "Get client active contract readings",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "ldhF6xzosqrAvenk",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "language": "python",
+        "pythonCode": "import pandas as pd\nfrom datetime import datetime, timedelta\n\n#region Reading the n8n input into pandas dataframe\ndata = [item['json'] for item in items]\ndf = pd.DataFrame(data)\n\noutliers = df[df[\"outlier\"] == \"True\"]\nrows, columns = outliers.shape\n#endregion\n\nformat_string = \"%Y-%m-%dT%H:%M:%S\"\n\n\nreturn_data = {\n  \"outliners_count\": rows,\n  \"mean\": df['3_months_average_consumption'].mean(),\n  \"q1\": df['3_months_average_consumption'].quantile(0.25),\n  \"q2\": df['3_months_average_consumption'].quantile(0.5),\n  \"q3\": df['3_months_average_consumption'].quantile(0.75),\n  \"skew\": df['3_months_average_consumption'].skew(),\n  \"kurt\": df['3_months_average_consumption'].kurt(),\n  \"std\": df['3_months_average_consumption'].std(),\n  \"start_date\": datetime.strftime(datetime.now() - timedelta(90), format_string),\n  \"end_date\": datetime.strftime(datetime.now(), format_string),\n}\nreturn return_data\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        704,
+        0
+      ],
+      "id": "a207ae28-9f30-422f-95ad-d839976f3897",
+      "name": "Code1"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Get client active contract readings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get client active contract readings": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Code1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code1": {
+      "main": [
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "d0c8f1cc-7aa2-4d7c-8b98-b92c114aa507",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "d2c4196b52ad3f8b61d20a5bf48a3628867463b763932423daf6a265e8220947"
+  },
+  "id": "IF0Oa1Rppv3tF5eZ",
+  "tags": []
+}

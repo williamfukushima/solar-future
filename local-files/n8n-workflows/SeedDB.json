@@ -1,0 +1,567 @@
+{
+  "name": "SeedDB",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -16,
+        0
+      ],
+      "id": "45a99105-08eb-4434-80d9-842e2ef93335",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "fileSelector": "/files/data.zip",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [
+        224,
+        0
+      ],
+      "id": "456a1528-6904-4641-bfce-9da9f8b430b7",
+      "name": "Read/Write Files from Disk"
+    },
+    {
+      "parameters": {
+        "outputPrefix": "=file_"
+      },
+      "type": "n8n-nodes-base.compression",
+      "typeVersion": 1.1,
+      "position": [
+        464,
+        0
+      ],
+      "id": "5dc9a664-a837-4d97-bb84-ec96b6474c8a",
+      "name": "Compression"
+    },
+    {
+      "parameters": {
+        "schema": {
+          "__rl": true,
+          "value": "solar_future",
+          "mode": "list",
+          "cachedResultName": "solar_future"
+        },
+        "table": {
+          "__rl": true,
+          "value": "contracts",
+          "mode": "list",
+          "cachedResultName": "contracts"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {
+            "is_active": false
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "contract_id",
+              "displayName": "contract_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "client_id",
+              "displayName": "client_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "start_date",
+              "displayName": "start_date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "is_active",
+              "displayName": "is_active",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1664,
+        160
+      ],
+      "id": "48ce6fb2-7351-479b-93fe-5af8ae187fa0",
+      "name": "Insert rows in contracts table",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "ldhF6xzosqrAvenk",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schema": {
+          "__rl": true,
+          "value": "solar_future",
+          "mode": "list",
+          "cachedResultName": "solar_future"
+        },
+        "table": {
+          "__rl": true,
+          "value": "energy_readings",
+          "mode": "list",
+          "cachedResultName": "energy_readings"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "reading_id",
+              "displayName": "reading_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "contract_id",
+              "displayName": "contract_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "reading_date",
+              "displayName": "reading_date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "kwh",
+              "displayName": "kwh",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1664,
+        320
+      ],
+      "id": "8522ef2c-cc96-476b-9938-e5b71c2b10ab",
+      "name": "Insert rows in readings table",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "ldhF6xzosqrAvenk",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schema": {
+          "__rl": true,
+          "value": "solar_future",
+          "mode": "list",
+          "cachedResultName": "solar_future"
+        },
+        "table": {
+          "__rl": true,
+          "value": "clients",
+          "mode": "list",
+          "cachedResultName": "clients"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "client_id",
+              "displayName": "client_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "name",
+              "displayName": "name",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "email",
+              "displayName": "email",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1664,
+        0
+      ],
+      "id": "9c746a71-bbfd-4e9f-aed6-8d2f1feb8c83",
+      "name": "Insert rows in clients table",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "ldhF6xzosqrAvenk",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "functionCode": "let results = [];\n\nfor (item of items) {\n    for (key of Object.keys(item.binary)) {\n        results.push({\n            json: {\n                fileName: item.binary[key].fileName\n            },\n            binary: {\n                data: item.binary[key],\n            }\n        });\n    }\n}\n\nreturn results;"
+      },
+      "name": "Split Up Binary Data",
+      "type": "n8n-nodes-base.function",
+      "position": [
+        736,
+        0
+      ],
+      "typeVersion": 1,
+      "id": "fcae428e-63d5-4e6c-8292-ea48703c39dd"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "ec8748b6-8dc8-448f-bbff-a10cc9d49f12",
+              "leftValue": "={{ $json.fileName }}",
+              "rightValue": "clientes.csv",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        1200,
+        0
+      ],
+      "id": "1b15e2a0-e89c-44b3-974a-70d4ea3a236a",
+      "name": "Filter clients csv"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "ec8748b6-8dc8-448f-bbff-a10cc9d49f12",
+              "leftValue": "={{ $json.fileName }}",
+              "rightValue": "contratos.csv",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        1200,
+        160
+      ],
+      "id": "25ea5723-50f8-4199-8651-be28df59de16",
+      "name": "Filter contracts csv"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "ec8748b6-8dc8-448f-bbff-a10cc9d49f12",
+              "leftValue": "={{ $json.fileName }}",
+              "rightValue": "leituras.csv",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        1200,
+        320
+      ],
+      "id": "0cbba871-0029-4778-b74a-52123020e3d8",
+      "name": "Filter readings csv"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        1392,
+        0
+      ],
+      "id": "c145f12b-43d7-4492-a067-f28cf13738b3",
+      "name": "Extract from clients",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        1392,
+        160
+      ],
+      "id": "ddf83909-be29-4e1b-86c4-00e0d926ace5",
+      "name": "Extract from contracts",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        1392,
+        320
+      ],
+      "id": "37d2f38e-3faa-4e4f-988e-7090e3a308bb",
+      "name": "Extract from readings",
+      "alwaysOutputData": true
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Read/Write Files from Disk",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read/Write Files from Disk": {
+      "main": [
+        [
+          {
+            "node": "Compression",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compression": {
+      "main": [
+        [
+          {
+            "node": "Split Up Binary Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Up Binary Data": {
+      "main": [
+        [
+          {
+            "node": "Filter clients csv",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Filter contracts csv",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Filter readings csv",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter clients csv": {
+      "main": [
+        [
+          {
+            "node": "Extract from clients",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter contracts csv": {
+      "main": [
+        [
+          {
+            "node": "Extract from contracts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter readings csv": {
+      "main": [
+        [
+          {
+            "node": "Extract from readings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from clients": {
+      "main": [
+        [
+          {
+            "node": "Insert rows in clients table",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from contracts": {
+      "main": [
+        [
+          {
+            "node": "Insert rows in contracts table",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from readings": {
+      "main": [
+        [
+          {
+            "node": "Insert rows in readings table",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "235d08d6-087e-4c53-b223-32cf70fe231f",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "d2c4196b52ad3f8b61d20a5bf48a3628867463b763932423daf6a265e8220947"
+  },
+  "id": "iMJ240eqcXfVBTnj",
+  "tags": []
+}
