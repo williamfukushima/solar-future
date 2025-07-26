@@ -1,13 +1,12 @@
 # Solar Future Automated Workflows
 
-This repository holds docker compose files for self-hosting a n8n container, a postgres database. The deliverables folder holds assets that will be used to setup the automated workflow.
+This repository holds docker compose files for self-hosting a n8n container and a postgres database. The local-files folder holds assets that will be used to setup the automated workflow.
 
 ## Getting Started
 
 These instructions will cover usage information and the setup of the deliverables from the technical case on the docker container.
 
 ### Prerequisities
-
 
 In order to run this container you'll need docker installed.
 
@@ -16,9 +15,15 @@ In order to run this container you'll need docker installed.
 * [Linux](https://docs.docker.com/linux/started/)
 
 ### Usage
-Setup the environment variables to your liking:
+
+#### n8n Credentials
+
+If you already have a `credentials.json` file, for this repository, put it in the `local-files` folder. This file should contain credentials for accessing the postgres database and the OpenAI model. Otherwise, you can setup them later manually.
 
 #### Environment Variables
+
+Setup the environment variables to your liking:
+
 
 Default port values:
 
@@ -70,7 +75,7 @@ With docker installed and with the daemon running, setup the containers by execu
 ## Seeding the database
 
 ### n8n Setup
-After executing the migration, open the n8n application (if localhosting, that would be https://localhost:`$N8N_PORT`).
+After executing the migration, open the n8n application (if localhosting, that would be `https://localhost:$N8N_PORT`).
 
 Create an account in the setup screen
 
@@ -82,15 +87,15 @@ Load the workflows and credentials by executing the following bash script on the
 
 Open the n8n dashboard to confirm the imports
 
-** If you didn't override the local-files/credentials files with your own, the template will be imported to be filled in the credentials dashboard. **
+*** If you didn't override the local-files/credentials files with your own, the template will be imported to be filled in the credentials dashboard. ***
 
 Run the `SeedDB.json` workflow once by clicking on it to populate the database with the compressed mock data that was loaded with the container in the local-files folder.
 
 ## Retrieving the client's last 3 months energy readings mean data
 
-The `RequestReportData.json` workflow will return raw user data about the mean of energy consumption during the last 3 months.
+The `RequestReportData.json` workflow will return raw user data about the mean of energy consumption during the last 3 months. It is available as a webhook.
 
-The `RequestReport.json` workflow will make the same queries as the latter flow, but will also calculate statistical paremeters of the values distribution and generate a report with conclusions regarding the distribuition's behaviour. 
+The `RequestReport.json` workflow will make the same queries as the latter flow, but will also calculate statistical paremeters of the values distribution and generate a report with conclusions regarding the distribuition's behaviour. It is available as a webhook.
 
 ## Built With
 
